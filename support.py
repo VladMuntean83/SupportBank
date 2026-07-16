@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import re
 
-PATH = 'data/Transactions2013.json'
+PATH = 'data/DodgyTransactions2015.csv'
 
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
