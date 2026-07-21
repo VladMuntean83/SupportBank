@@ -2,20 +2,21 @@ import pandas as pd
 import logging
 import re
 
-PATH = 'data/DodgyTransactions2015.csv'
-
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
 def group_transactions(df):
     filtered_df = df[['To', 'From', 'Amount']]
-    to_give = filtered_df.groupby(['From']).sum()
-    to_get = filtered_df.groupby(['To']).sum()
+
+    to_give = filtered_df[['From', 'Amount']].groupby(['From']).sum()
+    to_get = filtered_df[['To', 'Amount']].groupby(['To']).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
-              .filter(like='Amount'))
+              .filter(like='Amount')).fillna(0)
 
-    return all_df
+    all_df['Balance'] = all_df['Amount_to_get'] - all_df['Amount_to_give']
+
+    return all_df[['Balance']]
 
 def search_account(df, account):
     return df.loc[(df['From'] == account) | (df['To'] == account)]
@@ -25,7 +26,7 @@ def validate_df(path):
 
     if df['Amount'].dtype not in ['int64', 'float64']:
         print('Amount column is not of numeric type. All such rows will be ignored!')
-        logging.debug('Amount column is not of numeric type')
+        logging.debug('Amount column is not of numeric type.')
 
         df = df[df['Amount'].str.match(r"^-?\d+\.\d+$", na=False)]
 
@@ -50,11 +51,14 @@ if __name__ == '__main__':
                 print(group_transactions(df) if not df.empty else 'Select a file!')
             elif cmd.startswith('List '):
                 print(search_account(df, cmd[5:]) if not df.empty else 'Select a file!')
-            elif cmd == 'exit':
-                raise Exception('Program stopped by user')
+                        elif cmd == 'exit':
+                print('Program stopped by user.')
+                break
             else:
                 print('Invalid command')
-        except Exception as e:
-            print('Stopping program...')
-            logging.exception(f'Exception occurred: {e}')
+        except (EOFError, KeyboardInterrupt):
+            print('Program stopped by user.')
             break
+        except Exception as e:
+            logging.exception(f"Exception occured: {e}")
+            print(f'Exception occurred: {e}')
