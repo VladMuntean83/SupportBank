@@ -1,20 +1,19 @@
 import pandas as pd
 import logging
-import re
 
-PATH = 'data/Transactions2013.json'
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
 def group_transactions(df):
     filtered_df = df[['To', 'From', 'Amount']]
-    to_give = filtered_df.groupby(['From']).sum()
-    to_get = filtered_df.groupby(['To']).sum()
+
+    to_give = filtered_df[['From', 'Amount']].groupby(['From']).sum()
+    to_get = filtered_df[['To', 'Amount']].groupby(['To']).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
-              .filter(like='Amount'))
+              .filter(like='Amount')).fillna(0)
 
-    return all_df
+    all_df['Balance'] = all_df['Amount_to_get'] - all_df['Amount_to_give']
 
 def search_account(df, account):
     return df.loc[(df['From'] == account) | (df['To'] == account)]
@@ -22,21 +21,29 @@ def search_account(df, account):
 def validate_df(path):
     df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
 
-    for col in df.columns:
-        if 'From' in col:
-            df.rename(columns={col: 'From'}, inplace=True)
-        if 'To' in col:
-            df.rename(columns={col: 'To'}, inplace=True)
-        if 'Amount' in col:
-            df.rename(columns={col: 'Amount'}, inplace=True)
+    if df['Date'].dtype != 'datetime64[ns]':
+        print('Date column is not of datetime type. All such rows will be ignored!')
+        formated_date = pd.to_datetime(df['Date'],format='%d/%m/%Y',  errors='coerce')
+        print(formated_date)
+
+        for i, r in df[pd.isnull(formated_date)].iterrows():
+            logging.debug(f"Problematic date {i}: {r}")
+
+        df = df[~pd.isnull(formated_date)]
+        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
 
     if df['Amount'].dtype not in ['int64', 'float64']:
+        numeric_amount = pd.to_numeric(df['Amount'], errors='coerce')
         print('Amount column is not of numeric type. All such rows will be ignored!')
-        logging.debug('Amount column is not of numeric type')
 
-        df = df[df['Amount'].str.match(r"^-?\d+\.\d+$", na=False)]
+        for i, r in df[numeric_amount.isna()].iterrows():
+            logging.debug(f"Problematic amount {i}: {r}")
 
-        df['Amount'] = df['Amount'].apply(float)
+        logging.debug('Amount column is not of numeric type.')
+
+        df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
+
+        df['Amount'] = pd.to_numeric(df['Amount'])
 
     return df
 
