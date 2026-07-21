@@ -10,7 +10,7 @@ def group_transactions(df):
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
-              .filter(like='Amount'))
+              .filter(like='Amount')).fillna(0)
 
     all_df['Balance'] = all_df['Amount_to_get'] - all_df['Amount_to_give']
 
@@ -38,5 +38,8 @@ if __name__ == '__main__':
                 break
             else:
                 print('Invalid command')
+        except (EOFError, KeyboardInterrupt):
+            print('Program stopped by user.')
+            break
         except Exception as e:
             print(f'Exception occurred: {e}')
