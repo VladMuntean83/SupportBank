@@ -23,10 +23,24 @@ def search_account(df, account):
 def validate_df(path):
     df = pd.read_csv(path)
 
+    if df['Date'].dtype != 'datetime64[ns]':
+        print('Date column is not of datetime type. All such rows will be ignored!')
+        formated_date = pd.to_datetime(df['Date'],format='%d/%m/%Y',  errors='coerce')
+        print(formated_date)
+
+        for i, r in df[pd.isnull(formated_date)].iterrows():
+            logging.debug(f"Problematic date {i}: {r}")
+
+        df = df[~pd.isnull(formated_date)]
+        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
+
     if df['Amount'].dtype not in ['int64', 'float64']:
         numeric_amount = pd.to_numeric(df['Amount'], errors='coerce')
         print('Amount column is not of numeric type. All such rows will be ignored!')
-        print(df[numeric_amount.isna()])
+
+        for i, r in df[numeric_amount.isna()].iterrows():
+            logging.debug(f"Problematic amount {i}: {r}")
+
         logging.debug('Amount column is not of numeric type.')
 
         df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
