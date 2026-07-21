@@ -1,6 +1,5 @@
 import pandas as pd
 import logging
-import re
 
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
@@ -25,19 +24,20 @@ def validate_df(path):
     df = pd.read_csv(path)
 
     if df['Amount'].dtype not in ['int64', 'float64']:
+        numeric_amount = pd.to_numeric(df['Amount'], errors='coerce')
         print('Amount column is not of numeric type. All such rows will be ignored!')
+        print(df[numeric_amount.isna()])
         logging.debug('Amount column is not of numeric type.')
 
-        df = df[df['Amount'].str.match(r"^-?\d+\.\d+$", na=False)]
+        df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
 
-        df['Amount'] = df['Amount'].apply(float)
+        df['Amount'] = pd.to_numeric(df['Amount'])
 
     return df
 
 if __name__ == '__main__':
     print('Starting up...')
     logging.debug('Starting up...')
-
 
     df = pd.DataFrame()
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
                 print(group_transactions(df) if not df.empty else 'Select a file!')
             elif cmd.startswith('List '):
                 print(search_account(df, cmd[5:]) if not df.empty else 'Select a file!')
-                        elif cmd == 'exit':
+            elif cmd == 'exit':
                 print('Program stopped by user.')
                 break
             else:
