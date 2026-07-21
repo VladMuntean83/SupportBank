@@ -4,10 +4,12 @@ import logging
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
 def group_transactions(df):
-    filtered_df = df[['To', 'From', 'Amount']]
 
-    to_give = filtered_df[['From', 'Amount']].groupby(['From']).sum()
-    to_get = filtered_df[['To', 'Amount']].groupby(['To']).sum()
+    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
+    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
+
+    to_give = df[[from_col, 'Amount']].groupby([from_col]).sum()
+    to_get = df[[to_col, 'Amount']].groupby([to_col]).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
@@ -15,8 +17,13 @@ def group_transactions(df):
 
     all_df['Balance'] = all_df['Amount_to_get'] - all_df['Amount_to_give']
 
+    return all_df[['Balance']]
+
 def search_account(df, account):
-    return df.loc[(df['From'] == account) | (df['To'] == account)]
+    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
+    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
+
+    return df.loc[(df[from_col] == account) | (df[to_col] == account)]
 
 def validate_df(path):
     df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
@@ -24,7 +31,6 @@ def validate_df(path):
     if df['Date'].dtype != 'datetime64[ns]':
         print('Date column is not of datetime type. All such rows will be ignored!')
         formated_date = pd.to_datetime(df['Date'],format='%d/%m/%Y',  errors='coerce')
-        print(formated_date)
 
         for i, r in df[pd.isnull(formated_date)].iterrows():
             logging.debug(f"Problematic date {i}: {r}")
@@ -64,10 +70,13 @@ if __name__ == '__main__':
             elif cmd.startswith('List '):
                 print(search_account(df, cmd[5:]) if not df.empty else 'Select a file!')
             elif cmd == 'exit':
-                raise Exception('Program stopped by user')
+                print('Program stopped by user.')
+                break
             else:
                 print('Invalid command')
-        except Exception as e:
-            print('Stopping program...')
-            logging.exception(f'Exception occurred: {e}')
+        except (EOFError, KeyboardInterrupt):
+            print('Program stopped by user.')
             break
+        except Exception as e:
+            logging.exception(f"Exception occured: {e}")
+            print(f'Exception occurred: {e}')
