@@ -5,10 +5,12 @@ import xml.etree.ElementTree as ET
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
 def group_transactions(df):
-    filtered_df = df[['To', 'From', 'Amount']]
 
-    to_give = filtered_df[['From', 'Amount']].groupby(['From']).sum()
-    to_get = filtered_df[['To', 'Amount']].groupby(['To']).sum()
+    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
+    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
+
+    to_give = df[[from_col, 'Amount']].groupby([from_col]).sum()
+    to_get = df[[to_col, 'Amount']].groupby([to_col]).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
@@ -19,7 +21,10 @@ def group_transactions(df):
     return all_df[['Balance']]
 
 def search_account(df, account):
-    return df.loc[(df['From'] == account) | (df['To'] == account)]
+    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
+    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
+
+    return df.loc[(df[from_col] == account) | (df[to_col] == account)]
 
 def parse_xml(path):
     tree = ET.parse(path)
@@ -92,7 +97,7 @@ if __name__ == '__main__':
                 break
             else:
                 print('Invalid command')
-        except (EOFError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt) as e:
             print('Program stopped by user.')
             break
         except Exception as e:
