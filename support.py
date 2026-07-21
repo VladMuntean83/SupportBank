@@ -51,7 +51,6 @@ if __name__ == '__main__':
     print('Starting up...')
     logging.debug('Starting up...')
 
-
     df = pd.DataFrame()
 
     print('Type a command:')
