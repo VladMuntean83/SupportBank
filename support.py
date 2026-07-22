@@ -74,6 +74,7 @@ def validate_df(path):
     return df
 
 if __name__ == '__main__':
+
     print('Starting up...')
     logging.debug('Starting up...')
 
