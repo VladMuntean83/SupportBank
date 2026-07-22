@@ -6,11 +6,8 @@ logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBU
 
 def group_transactions(df):
 
-    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
-    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
-
-    to_give = df[[from_col, 'Amount']].groupby([from_col]).sum()
-    to_get = df[[to_col, 'Amount']].groupby([to_col]).sum()
+    to_give = df[['From', 'Amount']].groupby(['From']).sum()
+    to_get = df[['To', 'Amount']].groupby(['To']).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
@@ -21,10 +18,8 @@ def group_transactions(df):
     return all_df[['Balance']]
 
 def search_account(df, account):
-    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
-    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
 
-    return df.loc[(df[from_col] == account) | (df[to_col] == account)]
+    return df.loc[(df['From'] == account) | (df['To'] == account)]
 
 def parse_xml(path):
     tree = ET.parse(path)
@@ -35,7 +30,7 @@ def parse_xml(path):
     for row in root.findall('SupportTransaction'):
         transaction = {
             'Date': pd.to_datetime(int(row.get('Date')), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
-            'Description': row.find('Description').text,
+            'Narrative': row.find('Description').text,
             'Amount': float(row.find('Value').text or 0),
             'From': row.find('Parties/From').text or '',
             'To': row.find('Parties/To').text or ''
@@ -46,10 +41,7 @@ def parse_xml(path):
     return pd.DataFrame(to_df)
 
 def validate_df(path):
-    if path.endswith('.xml'):
-        df = parse_xml(path)
-    else:
-        df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
+    df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
 
     if df['Date'].dtype != 'datetime64[ns]':
         print('Date column is not of datetime type. All such rows will be ignored!')
@@ -73,6 +65,11 @@ def validate_df(path):
         df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
 
         df['Amount'] = pd.to_numeric(df['Amount'])
+
+    from_col = next(filter(lambda s: 'From' in s, df.columns))
+    to_col = next(filter(lambda s: 'To' in s, df.columns))
+
+    df.rename(columns={from_col: 'From', to_col: 'To'}, inplace=True)
 
     return df
 
