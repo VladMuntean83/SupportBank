@@ -26,11 +26,11 @@ def parse_xml(path):
     root = tree.getroot()
 
     format_row = lambda row: {
-            'Date': pd.to_datetime(int(row.get('Date')), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
-            'Narrative': row.find('Description').text,
-            'Amount': float(row.find('Value').text or 0),
-            'From': row.find('Parties/From').text or '',
-            'To': row.find('Parties/To').text or ''
+            'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
+            'Narrative': row.find('Description', '').text,
+            'Amount': float(row.find('Value', 0)),
+            'From': row.find('Parties/From', '').text,
+            'To': row.find('Parties/To', '').text
         }
 
     parsed_transactions = (format_row(row) for row in root.findall('SupportTransaction'))
