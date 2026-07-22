@@ -26,9 +26,10 @@ def parse_xml(path):
     root = tree.getroot()
 
     fallback = lambda field, val: field.text if field is not None else val
+    check_numeric_date = lambda date: int(date) if date.isnumeric() else 0
 
     format_row = lambda row: {
-            'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
+            'Date': pd.to_datetime(check_numeric_date(row.get('Date', '')), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
             'Narrative': fallback(row.find('Description'), ''),
             'Amount': fallback(row.find('Value'), 0),
             'From':fallback(row.find('Parties/From'), ''),
