@@ -5,11 +5,8 @@ logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBU
 
 def group_transactions(df):
 
-    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
-    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
-
-    to_give = df[[from_col, 'Amount']].groupby([from_col]).sum()
-    to_get = df[[to_col, 'Amount']].groupby([to_col]).sum()
+    to_give = df[['From', 'Amount']].groupby(['From']).sum()
+    to_get = df[['To', 'Amount']].groupby(['To']).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
@@ -20,10 +17,8 @@ def group_transactions(df):
     return all_df[['Balance']]
 
 def search_account(df, account):
-    from_col = filter(lambda s: 'From' in s, df.columns).__next__()
-    to_col = filter(lambda s: 'To' in s, df.columns).__next__()
 
-    return df.loc[(df[from_col] == account) | (df[to_col] == account)]
+    return df.loc[(df['From'] == account) | (df['To'] == account)]
 
 def validate_df(path):
     df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
@@ -50,6 +45,11 @@ def validate_df(path):
         df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
 
         df['Amount'] = pd.to_numeric(df['Amount'])
+
+    from_col = next(filter(lambda s: 'From' in s, df.columns))
+    to_col = next(filter(lambda s: 'To' in s, df.columns))
+
+    df.rename(columns={from_col: 'From', to_col: 'To'}, inplace=True)
 
     return df
 
