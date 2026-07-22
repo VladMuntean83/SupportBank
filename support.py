@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+import xml.etree.ElementTree as ET
 
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
@@ -20,8 +21,27 @@ def search_account(df, account):
 
     return df.loc[(df['From'] == account) | (df['To'] == account)]
 
+def parse_xml(path):
+    tree = ET.parse(path)
+    root = tree.getroot()
+
+    format_row = lambda row: {
+            'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
+            'Narrative': row.find('Description', '').text,
+            'Amount': float(row.find('Value', 0).text),
+            'From': row.find('Parties/From', '').text,
+            'To': row.find('Parties/To', '').text
+        }
+
+    parsed_transactions = (format_row(row) for row in root.findall('SupportTransaction'))
+
+    return pd.DataFrame(parsed_transactions)
+
 def validate_df(path):
-    df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
+    if path.endswith('.xml'):
+        df = parse_xml(path)
+    else:
+        df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
 
     if df['Date'].dtype != 'datetime64[ns]':
         print('Date column is not of datetime type. All such rows will be ignored!')
@@ -75,7 +95,7 @@ if __name__ == '__main__':
                 break
             else:
                 print('Invalid command')
-        except (EOFError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt) as e:
             print('Program stopped by user.')
             break
         except Exception as e:
