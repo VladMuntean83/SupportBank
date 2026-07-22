@@ -25,12 +25,14 @@ def parse_xml(path):
     tree = ET.parse(path)
     root = tree.getroot()
 
+    fallback = lambda field, val: field.text if field is not None else val
+
     format_row = lambda row: {
             'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
-            'Narrative': row.find('Description', '').text,
-            'Amount': float(row.find('Value', 0).text),
-            'From': row.find('Parties/From', '').text,
-            'To': row.find('Parties/To', '').text
+            'Narrative': fallback(row.find('Description'), ''),
+            'Amount': float(fallback(row.find('Value'), 0)),
+            'From':fallback(row.find('Parties/From'), ''),
+            'To': fallback(row.find('Parties/To'), ''),
         }
 
     parsed_transactions = (format_row(row) for row in root.findall('SupportTransaction'))
