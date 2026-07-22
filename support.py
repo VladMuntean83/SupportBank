@@ -4,10 +4,9 @@ import logging
 logging.basicConfig(filename='SupportBank.log', filemode='w', level=logging.DEBUG)
 
 def group_transactions(df):
-    filtered_df = df[['To', 'From', 'Amount']]
 
-    to_give = filtered_df[['From', 'Amount']].groupby(['From']).sum()
-    to_get = filtered_df[['To', 'Amount']].groupby(['To']).sum()
+    to_give = df[['From', 'Amount']].groupby(['From']).sum()
+    to_get = df[['To', 'Amount']].groupby(['To']).sum()
 
     all_df = (to_give.join(to_get,how='outer',
                           lsuffix='_to_give', rsuffix='_to_get')
@@ -18,15 +17,15 @@ def group_transactions(df):
     return all_df[['Balance']]
 
 def search_account(df, account):
+
     return df.loc[(df['From'] == account) | (df['To'] == account)]
 
 def validate_df(path):
-    df = pd.read_csv(path)
+    df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
 
     if df['Date'].dtype != 'datetime64[ns]':
         print('Date column is not of datetime type. All such rows will be ignored!')
         formated_date = pd.to_datetime(df['Date'],format='%d/%m/%Y',  errors='coerce')
-        print(formated_date)
 
         for i, r in df[pd.isnull(formated_date)].iterrows():
             logging.debug(f"Problematic date {i}: {r}")
@@ -46,6 +45,11 @@ def validate_df(path):
         df = df[df['Amount'].str.match(r"^-?\d+\.?\d*$", na=False)]
 
         df['Amount'] = pd.to_numeric(df['Amount'])
+
+    from_col = next(filter(lambda s: 'From' in s, df.columns))
+    to_col = next(filter(lambda s: 'To' in s, df.columns))
+
+    df.rename(columns={from_col: 'From', to_col: 'To'}, inplace=True)
 
     return df
 
