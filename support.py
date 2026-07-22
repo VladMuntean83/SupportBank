@@ -25,10 +25,7 @@ def parse_xml(path):
     tree = ET.parse(path)
     root = tree.getroot()
 
-    to_df = []
-
-    for row in root.findall('SupportTransaction'):
-        transaction = {
+    format_row = lambda row: {
             'Date': pd.to_datetime(int(row.get('Date')), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
             'Narrative': row.find('Description').text,
             'Amount': float(row.find('Value').text or 0),
@@ -36,12 +33,15 @@ def parse_xml(path):
             'To': row.find('Parties/To').text or ''
         }
 
-        to_df.append(transaction)
+    parsed_transactions = (format_row(row) for row in root.findall('SupportTransaction'))
 
-    return pd.DataFrame(to_df)
+    return pd.DataFrame(parsed_transactions)
 
 def validate_df(path):
-    df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
+    if path.endswith('.xml'):
+        df = parse_xml(path)
+    else:
+        df = pd.read_csv(path) if path.endswith('.csv') else pd.read_json(path)
 
     if df['Date'].dtype != 'datetime64[ns]':
         print('Date column is not of datetime type. All such rows will be ignored!')
