@@ -28,7 +28,7 @@ def parse_xml(path):
     format_row = lambda row: {
             'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
             'Narrative': row.find('Description', '').text,
-            'Amount': float(row.find('Value', 0)),
+            'Amount': float(row.find('Value', 0).text),
             'From': row.find('Parties/From', '').text,
             'To': row.find('Parties/To', '').text
         }
