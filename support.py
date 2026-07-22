@@ -30,7 +30,7 @@ def parse_xml(path):
     format_row = lambda row: {
             'Date': pd.to_datetime(int(row.get('Date', 0)), unit='D', origin='1899-12-30').strftime('%d/%m/%Y'),
             'Narrative': fallback(row.find('Description'), ''),
-            'Amount': float(fallback(row.find('Value'), 0)),
+            'Amount': fallback(row.find('Value'), 0),
             'From':fallback(row.find('Parties/From'), ''),
             'To': fallback(row.find('Parties/To'), ''),
         }
